@@ -1,28 +1,31 @@
+#ifndef METRICS_H
+#define METRICS_H
 /**
  * @file metrics.h
  * @brief Funciones para obtener el uso de CPU y memoria desde el sistema de archivos /proc.
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 /**
- * \def BUFFER_SIZE
- * \brief Size of the buffer used for reading files.
+ * @def BUFFER_SIZE
+ * @brief Size of the buffer used for reading files.
  */
 #define BUFFER_SIZE 256
 
 /**
- * \def SHORT_BUFFER_SIZE
- * \brief Size of the buffer used for reading short strings.
+ * @def SHORT_BUFFER_SIZE
+ * @brief Size of the buffer used for reading short strings.
  */
 #define SHORT_BUFFER_SIZE 32
 
 /**
- * \struct DiskStats
- * \brief Structure to hold disk statistics.
+ * @struct DiskStats
+ * @brief Structure to hold disk statistics.
  */
 typedef struct
 {
@@ -31,8 +34,8 @@ typedef struct
 } DiskStats;
 
 /**
- * \struct NetStats
- * \brief Structure to hold network statistics.
+ * @struct NetStats
+ * @brief Structure to hold network statistics.
  */
 typedef struct
 {
@@ -41,8 +44,8 @@ typedef struct
 } NetStats;
 
 /**
- * \struct CpuStats
- * \brief Structure to hold CPU statistics.
+ * @struct CpuStats
+ * @brief Structure to hold CPU statistics.
  */
 typedef struct
 {
@@ -50,6 +53,20 @@ typedef struct
     int procs_running;       /**< Number of running processes. */
     unsigned long long ctxt; /**< Number of context switches. */
 } CpuStats;
+
+/**
+ * @struct MetricsState
+ * @brief Structure to hold the state of the metrics.
+ */
+typedef struct
+{
+    bool cpu;
+    bool memory;
+    bool disk;
+    bool network;
+} MetricsState;
+
+extern MetricsState metrics_state;
 
 /**
  * @brief Obtiene el porcentaje de uso de memoria desde /proc/meminfo.
@@ -91,3 +108,5 @@ DiskStats get_disk_stats();
  * @return A NetStats struct with the number of kilobytes sent and received per second, -1.0 in case of error
  */
 NetStats get_net_stats();
+
+#endif // METRICS_H

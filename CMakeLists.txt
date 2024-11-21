@@ -33,3 +33,9 @@ target_link_libraries(monitoring_project
         prom
         promhttp
 )
+
+# Incluir los directorios de cJSON
+include_directories(/usr/include)
+
+# Vincular la biblioteca cJSON
+target_link_libraries(monitoring_project cjson)

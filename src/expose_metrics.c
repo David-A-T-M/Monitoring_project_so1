@@ -1,5 +1,4 @@
 #include "expose_metrics.h"
-#include <metrics.h>
 
 /** Mutex para sincronización de hilos */
 pthread_mutex_t lock;
@@ -30,6 +29,10 @@ static prom_gauge_t* net_sen_bytes_metric;
 
 void update_cpu_gauge()
 {
+    if (!metrics_state.cpu)
+    {
+        return;
+    }
     CpuStats cpu_stats =
         get_cpu_stats(); // Get the CPU usage percentage, the number of running processes and context switches
     if (cpu_stats.cpu_usage >= 0 && cpu_stats.procs_running >= 0 && cpu_stats.ctxt >= 0)
@@ -48,6 +51,10 @@ void update_cpu_gauge()
 
 void update_memory_gauge()
 {
+    if (!metrics_state.memory)
+    {
+        return;
+    }
     double usage = get_memory_usage();
     if (usage >= 0)
     {
@@ -63,6 +70,10 @@ void update_memory_gauge()
 
 void update_disk_gauge()
 {
+    if (!metrics_state.disk)
+    {
+        return;
+    }
     DiskStats disk_stats = get_disk_stats(); // Get the number of read and write operations per second
     if (disk_stats.rps >= 0 && disk_stats.wps >= 0)
     {
@@ -79,6 +90,10 @@ void update_disk_gauge()
 
 void update_net_gauge()
 {
+    if (!metrics_state.network)
+    {
+        return;
+    }
     NetStats net_stats = get_net_stats(); // Get the number of received and sent bytes per second
     if (net_stats.rec_bytesps >= 0 && net_stats.sen_bytesps >= 0)
     {
@@ -136,46 +151,58 @@ void init_metrics()
         return EXIT_FAILURE;
     }
 
-    // Creamos la métrica para el uso de memoria
-    memory_usage_metric = prom_gauge_new("memory_usage_percentage", "Porcentaje de uso de memoria", 0, NULL);
-    if (memory_usage_metric == NULL)
+    if (metrics_state.memory)
     {
-        fprintf(stderr, "Error al crear la métrica de uso de memoria\n");
-        return EXIT_FAILURE;
+        // Creamos la métrica para el uso de memoria
+        memory_usage_metric = prom_gauge_new("memory_usage_percentage", "Porcentaje de uso de memoria", 0, NULL);
+        if (memory_usage_metric == NULL)
+        {
+            fprintf(stderr, "Error al crear la métrica de uso de memoria\n");
+            return EXIT_FAILURE;
+        }
+
+        if (prom_collector_registry_must_register_metric(memory_usage_metric) == NULL)
+        {
+            fprintf(stderr, "Error al registrar la métrica de uso de memoria\n");
+        }
     }
 
-    if (prom_collector_registry_must_register_metric(memory_usage_metric) == NULL)
+    if (metrics_state.disk)
     {
-        fprintf(stderr, "Error al registrar la métrica de uso de memoria\n");
+        // Creates and registers the metric for disk write operations
+        disk_read_metric = prom_collector_registry_must_register_metric(
+            prom_gauge_new("disk_read_operations", "Number of reading operations per second", 0, NULL));
+
+        // Creates and registers the metric for disk write operations
+        disk_write_metric = prom_collector_registry_must_register_metric(
+            prom_gauge_new("disk_write_operations", "Number of writing operations per second", 0, NULL));
     }
 
-    // Creates and registers the metric for disk write operations
-    disk_read_metric = prom_collector_registry_must_register_metric(
-        prom_gauge_new("disk_read_operations", "Number of reading operations per second", 0, NULL));
+    if (metrics_state.cpu)
+    {
+        // Creates and registers the metric for cpu usage
+        cpu_usage_metric = prom_collector_registry_must_register_metric(
+            prom_gauge_new("cpu_usage_percentage", "Percentage of CPU usage", 0, NULL));
 
-    // Creates and registers the metric for disk write operations
-    disk_write_metric = prom_collector_registry_must_register_metric(
-        prom_gauge_new("disk_write_operations", "Number of writing operations per second", 0, NULL));
+        // Creates and registers the metric for context switches
+        context_switches_metric = prom_collector_registry_must_register_metric(
+            prom_gauge_new("context_switches", "Number of context switches", 0, NULL));
 
-    // Creates and registers the metric for cpu usage
-    cpu_usage_metric = prom_collector_registry_must_register_metric(
-        prom_gauge_new("cpu_usage_percentage", "Percentage of CPU usage", 0, NULL));
+        // Creates and registers the metric for running processes
+        procs_running_metric = prom_collector_registry_must_register_metric(
+            prom_gauge_new("procs_running", "Number of running processes", 0, NULL));
+    }
 
-    // Creates and registers the metric for context switches
-    context_switches_metric = prom_collector_registry_must_register_metric(
-        prom_gauge_new("context_switches", "Number of context switches", 0, NULL));
+    if (metrics_state.network)
+    {
+        // Creates and registers the metric for received bytes per second
+        net_rec_bytes_metric = prom_collector_registry_must_register_metric(
+            prom_gauge_new("net_received_bytes", "Number of received bytes per second", 0, NULL));
 
-    // Creates and registers the metric for running processes
-    procs_running_metric = prom_collector_registry_must_register_metric(
-        prom_gauge_new("procs_running", "Number of running processes", 0, NULL));
-
-    // Creates and registers the metric for received bytes per second
-    net_rec_bytes_metric = prom_collector_registry_must_register_metric(
-        prom_gauge_new("net_received_bytes", "Number of received bytes per second", 0, NULL));
-
-    // Creates and registers the metric for sent bytes per second
-    net_sen_bytes_metric = prom_collector_registry_must_register_metric(
-        prom_gauge_new("net_sent_bytes", "Number of sent bytes per second", 0, NULL));
+        // Creates and registers the metric for sent bytes per second
+        net_sen_bytes_metric = prom_collector_registry_must_register_metric(
+            prom_gauge_new("net_sent_bytes", "Number of sent bytes per second", 0, NULL));
+    }
 }
 
 void destroy_mutex()

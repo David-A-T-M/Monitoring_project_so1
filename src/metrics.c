@@ -1,5 +1,7 @@
 #include "metrics.h"
 
+MetricsState metrics_state = {true, true, true, true};
+
 double get_memory_usage()
 {
     FILE* fp;

@@ -1,0 +1,4 @@
+{
+  "sampling_interval": 3,
+  "enabled_metrics": ["cpu", "memory"]
+}

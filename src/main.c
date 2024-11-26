@@ -6,13 +6,16 @@
 #include "expose_metrics.h"
 #include <cjson/cJSON.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
 #define FIFO_PATH "/tmp/monitor_fifo"
+volatile sig_atomic_t write_fifo_flag = 0;
 
-//void write_active_metrics_to_fifo();
+void signal_handler(int signo);
+void write_active_metrics_to_fifo();
 void load_config(const char* filename);
 
 /**
@@ -30,14 +33,23 @@ int main(int argc, char* argv[])
 {
     load_config("config.json");
 
-    /*if (access(FIFO_PATH, F_OK) == -1) { // Verifica si el archivo no existe
+    if (access(FIFO_PATH, F_OK) == -1) {
         if (mkfifo(FIFO_PATH, 0666) == -1) {
             perror("Error creating FIFO");
             return EXIT_FAILURE;
         }
-    } else {
-        printf("FIFO already exists: %s\n", FIFO_PATH);
-    }*/
+    }
+
+    // Configurar manejador de señal
+    struct sigaction sa;
+    sa.sa_handler = signal_handler;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+
+    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+        perror("Error setting up signal handler");
+        return EXIT_FAILURE;
+    }
 
     // Creamos un hilo para exponer las métricas vía HTTP
     init_metrics(); // Initialize mutex and metrics
@@ -50,7 +62,6 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-
     // Bucle principal para actualizar las métricas cada segundo
     while (true)
     {
@@ -59,11 +70,11 @@ int main(int argc, char* argv[])
         update_disk_gauge();
         update_net_gauge();
 
-        // Escribir las métricas activas en la FIFO
-        //pthread_mutex_lock(&lock);
-        //write_active_metrics_to_fifo();
-        //printf("Se escribió en la fifo\n");
-        //pthread_mutex_unlock(&lock);
+        if (write_fifo_flag) {
+            write_active_metrics_to_fifo();
+            write_fifo_flag = 0;
+        }
+
         sleep(SLEEP_TIME);
     }
 
@@ -142,7 +153,11 @@ void load_config(const char* filename)
 
     cJSON_Delete(config);
 }
-/*
+
+void signal_handler(int signo) {
+    write_fifo_flag = 1;
+}
+
 void write_active_metrics_to_fifo()
 {
     char buffer[512]; // Suficiente para todas las métricas activas
@@ -171,12 +186,10 @@ void write_active_metrics_to_fifo()
     }
 
     // Escribir en la FIFO
-    int fd = open(FIFO_PATH, O_WRONLY, O_NONBLOCK);
+    int fd = open(FIFO_PATH, O_WRONLY | O_NONBLOCK);
     if (fd != -1)
     {
-        int wb = write(fd, buffer, offset);
+        write(fd, buffer, offset);
         close(fd);
-
     }
 }
-*/

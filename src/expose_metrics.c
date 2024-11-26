@@ -32,21 +32,18 @@ static prom_gauge_t* net_rec_bytes_metric;
 static prom_gauge_t* net_sen_bytes_metric;
 
 void update_cpu_gauge()
-{   printf("Se actualizó cpu 0\n");
+{
     if (!metrics_state.cpu)
     {
         return;
     }
-    printf("Se actualizó cpu 1\n");
     pthread_mutex_lock(&lock);                                           // Lock the mutex
-    printf("Se actualizó cpu 2\n");
     cpu_stats = get_cpu_stats(); // Get the CPU usage percentage, the number of running processes and context switches
     if (cpu_stats.cpu_usage >= 0 && cpu_stats.procs_running >= 0 && cpu_stats.ctxt >= 0)
     {
         prom_gauge_set(cpu_usage_metric, cpu_stats.cpu_usage, NULL);         // Update the CPU usage
         prom_gauge_set(context_switches_metric, cpu_stats.ctxt, NULL);       // Update the number of context switches
         prom_gauge_set(procs_running_metric, cpu_stats.procs_running, NULL); // Update the number of running processes
-        printf("Se actualizó cpu 3\n");
     }
     else
     {
@@ -66,7 +63,6 @@ void update_memory_gauge()
     if (memory_stats.usage >= 0)
     {
         prom_gauge_set(memory_usage_metric, memory_stats.usage, NULL);
-        printf("Se actualizó mem\n");
     }
     else
     {
@@ -87,7 +83,6 @@ void update_disk_gauge()
     {
         prom_gauge_set(disk_read_metric, disk_stats.rps, NULL);  // Update the number of read operations per second
         prom_gauge_set(disk_write_metric, disk_stats.wps, NULL); // Update the number of write operations per second
-        printf("Se actualizó disk\n");
     }
     else
     {
@@ -109,7 +104,6 @@ void update_net_gauge()
         prom_gauge_set(net_rec_bytes_metric, net_stats.rec_bytesps,
                        NULL); // Update the number of received bytes per second
         prom_gauge_set(net_sen_bytes_metric, net_stats.sen_bytesps, NULL); // Update the number of sent bytes per second
-        printf("Se actualizó net\n");
     }
     else
     {
@@ -121,13 +115,10 @@ void update_net_gauge()
 void* expose_metrics(void* arg)
 {
     (void)arg; // Argumento no utilizado
-    printf("Expose 1\n");
     // Aseguramos que el manejador HTTP esté adjunto al registro por defecto
     promhttp_set_active_collector_registry(NULL);
-    printf("Expose 2\n");
     // Iniciamos el servidor HTTP en el puerto 8000
     struct MHD_Daemon* daemon = promhttp_start_daemon(MHD_USE_SELECT_INTERNALLY, 8000, NULL, NULL);
-    printf("Expose 3\n");
     if (daemon == NULL)
     {
         fprintf(stderr, "Error al iniciar el servidor HTTP\n");

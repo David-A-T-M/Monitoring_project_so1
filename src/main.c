@@ -31,7 +31,7 @@ int SLEEP_TIME = 1;
  */
 int main(int argc, char* argv[])
 {
-    load_config("config.json");
+    load_config("./config.json");
 
     if (access(FIFO_PATH, F_OK) == -1) {
         if (mkfifo(FIFO_PATH, 0666) == -1) {

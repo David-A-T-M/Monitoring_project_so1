@@ -6,7 +6,6 @@
  */
 
 #include "metrics.h"
-// #include "read_cpu_usage.h"
 #include <errno.h>
 #include <prom.h>
 #include <promhttp.h>
@@ -15,6 +14,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h> // Para sleep
+
+extern MemoryStats memory_stats;
+extern CpuStats cpu_stats;
+extern DiskStats disk_stats;
+extern NetStats net_stats;
+
+/** Mutex para sincronización de hilos */
+extern pthread_mutex_t lock;
 
 /**
  * \def BUFFER_SIZE

@@ -24,6 +24,15 @@
 #define SHORT_BUFFER_SIZE 32
 
 /**
+ * @struct MemoryStats
+ * @brief Structure to hold memory statistics.
+ */
+typedef struct
+{
+    double usage; /**< Percentage of memory usage. */
+} MemoryStats;
+
+/**
  * @struct DiskStats
  * @brief Structure to hold disk statistics.
  */
@@ -76,7 +85,7 @@ extern MetricsState metrics_state;
  *
  * @return Uso de memoria como porcentaje (0.0 a 100.0), o -1.0 en caso de error.
  */
-double get_memory_usage();
+MemoryStats get_memory_usage();
 
 /**
  * @brief Calculates the CPU usage percentage, reads the procs_running and ctxt from /proc/stat

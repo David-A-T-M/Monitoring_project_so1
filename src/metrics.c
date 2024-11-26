@@ -2,18 +2,19 @@
 
 MetricsState metrics_state = {true, true, true, true};
 
-double get_memory_usage()
+MemoryStats get_memory_usage()
 {
     FILE* fp;
     char buffer[BUFFER_SIZE];
     unsigned long long total_mem = 0, free_mem = 0;
+    MemoryStats stats = {-1.0}; // Initialize to -1.0 in case of error
 
     // Abrir el archivo /proc/meminfo
     fp = fopen("/proc/meminfo", "r");
     if (fp == NULL)
     {
         perror("Error al abrir /proc/meminfo");
-        return -1.0;
+        return stats;
     }
 
     // Leer los valores de memoria total y disponible
@@ -35,14 +36,14 @@ double get_memory_usage()
     if (total_mem == 0 || free_mem == 0)
     {
         fprintf(stderr, "Error al leer la información de memoria desde /proc/meminfo\n");
-        return -1.0;
+        return stats;
     }
 
     // Calcular el porcentaje de uso de memoria
     double used_mem = total_mem - free_mem;
-    double mem_usage_percent = (used_mem / total_mem) * 100.0;
+    stats.usage = (used_mem / total_mem) * 100.0;
 
-    return mem_usage_percent;
+    return stats;
 }
 
 CpuStats get_cpu_stats()
@@ -51,14 +52,14 @@ CpuStats get_cpu_stats()
                               prev_irq = 0, prev_softirq = 0, prev_steal = 0;
     unsigned long long user, nice, system, idle, iowait, irq, softirq, steal;
     unsigned long long totald, idled;
-    CpuStats cpu_stats = {-1.0, -1, -1}; // Initialize to -1.0, -1, -1 in case of error
+    CpuStats stats = {-1.0, -1, -1}; // Initialize to -1.0, -1, -1 in case of error
 
     // Abrir el archivo /proc/stat
     FILE* fp = fopen("/proc/stat", "r");
     if (fp == NULL)
     {
         perror("Error al abrir /proc/stat");
-        return cpu_stats;
+        return stats;
     }
 
     char buffer[BUFFER_SIZE * 4];
@@ -66,7 +67,7 @@ CpuStats get_cpu_stats()
     {
         perror("Error al leer /proc/stat");
         fclose(fp);
-        return cpu_stats;
+        return stats;
     }
 
     // Analizar los valores de tiempo de CPU
@@ -75,17 +76,17 @@ CpuStats get_cpu_stats()
     if (ret < 8)
     {
         fprintf(stderr, "Error al parsear /proc/stat\n");
-        return cpu_stats;
+        return stats;
     }
 
     // Loop through the file to find the context switches and running processes
     while (fgets(buffer, sizeof(buffer), fp) != NULL)
     {
-        if (sscanf(buffer, "ctxt %llu", &cpu_stats.ctxt) == 1)
+        if (sscanf(buffer, "ctxt %llu", &stats.ctxt) == 1)
         {
             continue; // context switches found
         }
-        if (sscanf(buffer, "procs_running %d", &cpu_stats.procs_running) == 1)
+        if (sscanf(buffer, "procs_running %d", &stats.procs_running) == 1)
         {
             break; // Procs running found, we can stop reading
         }
@@ -108,11 +109,11 @@ CpuStats get_cpu_stats()
     if (totald == 0)
     {
         fprintf(stderr, "Totald es cero, no se puede calcular el uso de CPU!\n");
-        return cpu_stats;
+        return stats;
     }
 
     // Calcular el porcentaje de uso de CPU
-    cpu_stats.cpu_usage = ((double)(totald - idled) / totald) * 100.0;
+    stats.cpu_usage = ((double)(totald - idled) / totald) * 100.0;
 
     // Actualizar los valores anteriores para la siguiente lectura
     prev_user = user;
@@ -124,7 +125,7 @@ CpuStats get_cpu_stats()
     prev_softirq = softirq;
     prev_steal = steal;
 
-    return cpu_stats; // Return the struct with the CPU usage percentage, the number of running processes and context
+    return stats; // Return the struct with the CPU usage percentage, the number of running processes and context
                       // switches
 }
 

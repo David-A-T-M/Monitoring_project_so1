@@ -4,10 +4,15 @@
  */
 
 #include "expose_metrics.h"
-
 #include <cjson/cJSON.h>
+#include <fcntl.h>
 #include <stdbool.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
+#define FIFO_PATH "/tmp/monitor_fifo"
+
+//void write_active_metrics_to_fifo();
 void load_config(const char* filename);
 
 /**
@@ -25,40 +30,52 @@ int main(int argc, char* argv[])
 {
     load_config("config.json");
 
+    /*if (access(FIFO_PATH, F_OK) == -1) { // Verifica si el archivo no existe
+        if (mkfifo(FIFO_PATH, 0666) == -1) {
+            perror("Error creating FIFO");
+            return EXIT_FAILURE;
+        }
+    } else {
+        printf("FIFO already exists: %s\n", FIFO_PATH);
+    }*/
+
     // Creamos un hilo para exponer las métricas vía HTTP
+    init_metrics(); // Initialize mutex and metrics
+
     pthread_t tid;
     if (pthread_create(&tid, NULL, expose_metrics, NULL) != 0) // Successfull thread creation returns 0
     {
         fprintf(stderr, "Error al crear el hilo del servidor HTTP\n");
+        unlink(FIFO_PATH); // Limpiar la FIFO en caso de error
         return EXIT_FAILURE;
     }
 
-    init_metrics(); // Initialize mutex and metrics
 
     // Bucle principal para actualizar las métricas cada segundo
-    while (true) {
-        if (metrics_state.cpu) {
-            update_cpu_gauge();
-        }
-        if (metrics_state.memory) {
-            update_memory_gauge();
-        }
-        if (metrics_state.disk) {
-            update_disk_gauge();
-        }
-        if (metrics_state.network) {
-            update_net_gauge();
-        }
+    while (true)
+    {
+        update_cpu_gauge();
+        update_memory_gauge();
+        update_disk_gauge();
+        update_net_gauge();
+
+        // Escribir las métricas activas en la FIFO
+        //pthread_mutex_lock(&lock);
+        //write_active_metrics_to_fifo();
+        //printf("Se escribió en la fifo\n");
+        //pthread_mutex_unlock(&lock);
         sleep(SLEEP_TIME);
     }
 
-
+    unlink(FIFO_PATH); // Eliminar la FIFO al salir
     return EXIT_SUCCESS;
 }
 
-void load_config(const char* filename) {
+void load_config(const char* filename)
+{
     FILE* file = fopen(filename, "r");
-    if (!file) {
+    if (!file)
+    {
         perror("Error al abrir config.json");
         return;
     }
@@ -75,20 +92,23 @@ void load_config(const char* filename) {
     cJSON* config = cJSON_Parse(data);
     free(data);
 
-    if (!config) {
+    if (!config)
+    {
         fprintf(stderr, "Error al parsear config.json: %s\n", cJSON_GetErrorPtr());
         return;
     }
 
     // Leer el intervalo de muestreo
     cJSON* interval = cJSON_GetObjectItem(config, "sampling_interval");
-    if (cJSON_IsNumber(interval)) {
+    if (cJSON_IsNumber(interval))
+    {
         SLEEP_TIME = interval->valueint;
     }
 
     // Leer las métricas habilitadas
     cJSON* enabled_metrics = cJSON_GetObjectItem(config, "enabled_metrics");
-    if (cJSON_IsArray(enabled_metrics)) {
+    if (cJSON_IsArray(enabled_metrics))
+    {
         // Inicializar estado de las métricas en falso
         metrics_state.cpu = false;
         metrics_state.memory = false;
@@ -96,15 +116,24 @@ void load_config(const char* filename) {
         metrics_state.network = false;
 
         cJSON* metric = NULL;
-        cJSON_ArrayForEach(metric, enabled_metrics) {
-            if (cJSON_IsString(metric)) {
-                if (strcmp(metric->valuestring, "cpu") == 0) {
+        cJSON_ArrayForEach(metric, enabled_metrics)
+        {
+            if (cJSON_IsString(metric))
+            {
+                if (strcmp(metric->valuestring, "cpu") == 0)
+                {
                     metrics_state.cpu = true;
-                } else if (strcmp(metric->valuestring, "memory") == 0) {
+                }
+                else if (strcmp(metric->valuestring, "memory") == 0)
+                {
                     metrics_state.memory = true;
-                } else if (strcmp(metric->valuestring, "disk") == 0) {
+                }
+                else if (strcmp(metric->valuestring, "disk") == 0)
+                {
                     metrics_state.disk = true;
-                } else if (strcmp(metric->valuestring, "network") == 0) {
+                }
+                else if (strcmp(metric->valuestring, "network") == 0)
+                {
                     metrics_state.network = true;
                 }
             }
@@ -113,3 +142,41 @@ void load_config(const char* filename) {
 
     cJSON_Delete(config);
 }
+/*
+void write_active_metrics_to_fifo()
+{
+    char buffer[512]; // Suficiente para todas las métricas activas
+    int offset = 0;
+
+    // Verificar qué métricas están activas y agregar al buffer
+    if (metrics_state.cpu)
+    {
+        offset += snprintf(buffer + offset, sizeof(buffer) - offset,
+                           "CPU - Usage: %.2f, Procs running: %d, Ctx switches: %llu\n", cpu_stats.cpu_usage,
+                           cpu_stats.procs_running, cpu_stats.ctxt);
+    }
+    if (metrics_state.memory)
+    {
+        offset += snprintf(buffer + offset, sizeof(buffer) - offset, "Memory - Usage: %.2f%%\n", memory_stats.usage);
+    }
+    if (metrics_state.disk)
+    {
+        offset += snprintf(buffer + offset, sizeof(buffer) - offset, "Disk - RPS: %.2f, WPS: %.2f\n", disk_stats.rps,
+                           disk_stats.wps);
+    }
+    if (metrics_state.network)
+    {
+        offset += snprintf(buffer + offset, sizeof(buffer) - offset, "Network - RX: %.2f, TX: %.2f\n",
+                           net_stats.rec_bytesps, net_stats.sen_bytesps);
+    }
+
+    // Escribir en la FIFO
+    int fd = open(FIFO_PATH, O_WRONLY, O_NONBLOCK);
+    if (fd != -1)
+    {
+        int wb = write(fd, buffer, offset);
+        close(fd);
+
+    }
+}
+*/

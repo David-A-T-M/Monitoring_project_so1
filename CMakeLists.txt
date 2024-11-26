@@ -6,6 +6,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/prom/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/promhttp/include)
 
+find_package(libmicrohttpd REQUIRED)
+find_package(cJSON REQUIRED)
+
 add_subdirectory(lib/prom)
 add_subdirectory(lib/promhttp)
 
@@ -38,4 +41,4 @@ target_link_libraries(monitoring_project
 include_directories(/usr/include)
 
 # Vincular la biblioteca cJSON
-target_link_libraries(monitoring_project cjson)
+target_link_libraries(monitoring_project libmicrohttpd::libmicrohttpd cjson::cjson)

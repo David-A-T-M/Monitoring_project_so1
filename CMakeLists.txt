@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.10)
 project(monitoring_project)
 
 # Añadir las carpetas include y lib
-include_directories(${CMAKE_SOURCE_DIR}/include)
-include_directories(${CMAKE_SOURCE_DIR}/lib/prom/include)
-include_directories(${CMAKE_SOURCE_DIR}/lib/promhttp/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/prom/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/promhttp/include)
 
 add_subdirectory(lib/prom)
 add_subdirectory(lib/promhttp)

@@ -23,15 +23,6 @@ add_executable(monitoring_project
         src/expose_metrics.c
 )
 
-# Linkear bibliotecas dinámicas desde la carpeta lib
-#[[link_directories(${CMAKE_SOURCE_DIR}/lib)
-
-# Vincular bibliotecas prom y promhttp
-target_link_libraries(monitoring_project
-        ${CMAKE_SOURCE_DIR}/lib/prom/libprom.so
-        ${CMAKE_SOURCE_DIR}/lib/promhttp/libpromhttp.so
-)]]
-
 target_link_libraries(monitoring_project
         prom
         promhttp

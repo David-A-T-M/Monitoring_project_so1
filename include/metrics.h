@@ -15,7 +15,7 @@
  * @def BUFFER_SIZE
  * @brief Size of the buffer used for reading files.
  */
-#define BUFFER_SIZE 256
+#define BUFFER_SIZE 1024
 
 /**
  * @def SHORT_BUFFER_SIZE

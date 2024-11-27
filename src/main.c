@@ -12,11 +12,15 @@
 #include <sys/types.h>
 
 #define FIFO_PATH "/tmp/monitor_fifo"
+#define JSON_PATH "/CLionProjects/so-i-24-chp2-David-A-T-M/config.json"
+
 volatile sig_atomic_t write_fifo_flag = 0;
 
 void signal_handler(int signo);
 void write_active_metrics_to_fifo();
 void load_config(const char* filename);
+char* abs_path(const char* path);
+
 
 /**
  * @brief Time to sleep between metric updates.
@@ -31,7 +35,9 @@ int SLEEP_TIME = 1;
  */
 int main(int argc, char* argv[])
 {
-    load_config("./config.json");
+    char* absolute_path = abs_path(JSON_PATH);
+    load_config(absolute_path);
+    free(absolute_path);
 
     if (access(FIFO_PATH, F_OK) == -1) {
         if (mkfifo(FIFO_PATH, 0666) == -1) {
@@ -160,7 +166,7 @@ void signal_handler(int signo) {
 
 void write_active_metrics_to_fifo()
 {
-    char buffer[512]; // Suficiente para todas las métricas activas
+    char buffer[BUFFER_SIZE];
     int offset = 0;
 
     // Verificar qué métricas están activas y agregar al buffer
@@ -192,4 +198,29 @@ void write_active_metrics_to_fifo()
         write(fd, buffer, offset);
         close(fd);
     }
+}
+
+char* abs_path(const char* path)
+{
+    if (path == NULL)
+    {
+        return NULL;
+    }
+
+    const char* home = getenv("HOME");
+
+    size_t home_len = strlen(home);
+    size_t path_len = strlen(path);
+    char* absolute_path = malloc(home_len + path_len + 2);
+
+    if (absolute_path == NULL)
+    {
+        perror("Failed to allocate memory");
+        return NULL;
+    }
+
+    strcpy(absolute_path, home);
+    strcat(absolute_path, path);
+
+    return absolute_path;
 }

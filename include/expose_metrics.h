@@ -24,12 +24,6 @@ extern NetStats net_stats;
 extern pthread_mutex_t lock;
 
 /**
- * \def BUFFER_SIZE
- * \brief Size of the buffer used for reading files.
- */
-#define BUFFER_SIZE 1024
-
-/**
  * @brief Updates the CPU usage, context switches and running processes metrics
  */
 void update_cpu_gauge();
